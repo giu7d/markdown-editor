@@ -1,45 +1,10 @@
 import React, { useState } from "react";
 import uuid from "uuid/v4";
 
-const defaultValue = `
-# it's h1
-## it's h2
-### it's h3
-#### it's h4
-##### it's h5
-###### it's h6
-
-i have a **bold** text
-i have a text that is **bold**
-__bold__
-
-i have a *italic* text
-i have a text that is *italic*
-_italic_
-
-i am mixing *italic* with __bold__
-i am mixing _italic_ with **bold**
-i am mixing _italic_ with __bold__
-i am mixing *italic* with **bold**
-
-i am mixing __bold__ with _italic_
-i am mixing **bold** with *italic*
-i am mixing __bold__ with *italic*
-i am mixing **bold** with _italic_
-
-\`code snippet\`
-here is a \`code snippet\` for you
-here is a \`code snippet\` mixed with __bold__
-here is a \`code snippet\` mixed with __bold__ and  _italic_
-here is a \`code snippet\` mixed with __bold__ and _italic_ and **bold** and *italic*
-
-2nd paragraph. *Italic* and **bold**, and \`monospace\`. Itemized lists look like:
-`;
-
 const DICTIONARY = {
   elements: {
     header: /(?<=#)(.*)/g,
-    markers: /(__.*__)|(\*\*.*\*\*)|(_.*_)|(\*.*\*)|(`.*`)/g
+    markers: /(__.*?__)|(\*\*.*?\*\*)|(_.*?_)|(\*.*?\*)|(`.*?`)/g
   },
   opertions: {
     h1: /(?<=^#\s)(.*)/g,
@@ -52,6 +17,10 @@ const DICTIONARY = {
     italic: /(?<=\*)(.*)(?=\*)|(?<=_)(.*)(?=_)/g,
     code: /(?<=`)(.*)(?=`)/g
   }
+};
+
+const ClickableLine = ({ children }) => {
+  return <span onClick={e => console.log("click")}>{children}</span>;
 };
 
 const headerParser = item => {
@@ -79,7 +48,7 @@ const paragraphParser = item => {
             return <i key={uuid()}>{subItem.match(italic)}</i>;
           else if (subItem.match(code))
             return <code key={uuid()}>{subItem.match(code)}</code>;
-          return subItem;
+          else return subItem;
         })}
     </p>
   );
@@ -88,34 +57,49 @@ const paragraphParser = item => {
 const markdownEngine = stack => {
   return stack
     .map(item => {
-      if (item.match(DICTIONARY.elements.header)) return headerParser(item);
-      else return paragraphParser(item);
+      if (item.match(DICTIONARY.elements.header))
+        return <ClickableLine key={uuid()}>{headerParser(item)}</ClickableLine>;
+      else if (item)
+        return (
+          <ClickableLine key={uuid()}>{paragraphParser(item)}</ClickableLine>
+        );
+      else return <br key={uuid()} />;
     })
     .filter(item => item !== null);
 };
 
 function App() {
+  const [textareaValue, setTextareaValue] = useState("");
   const [html, setHtml] = useState([]);
 
-  const parse = event => {
-    // Get the field value
-    const value = event.target.value;
+  const parse = value => {
     // Create a opertions stack
     const stack = value.split("\n");
     // Parse Markdown to HTML
     const parsedHtml = markdownEngine(stack);
     // Inject the result
-    setHtml(parsedHtml);
+    setHtml(oldValue => oldValue.concat(...parsedHtml));
+  };
+
+  const handleKeyPress = event => {
+    if (event.key === "Enter") {
+      parse(textareaValue);
+      setTextareaValue("");
+      console.log(html);
+    }
   };
 
   return (
     <main>
-      <textarea
-        defaultValue={defaultValue}
-        onBlur={parse}
-        style={{ width: "100%", height: 250 }}
-      />
-      <div>{html}</div>
+      <div>
+        {html}
+        <input
+          value={textareaValue}
+          onChange={e => setTextareaValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          style={{ width: "100%", height: "auto" }}
+        />
+      </div>
     </main>
   );
 }
